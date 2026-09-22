@@ -100,7 +100,7 @@ async function sendMessage() {
   }
 }
 
-function copy  Result() {
+function copyResult() {
   const resultBox = document.getElementById("resultBox");
   const text = resultBox.innerText;
 
