@@ -1,6 +1,9 @@
 import os
 import certifi
 import asyncio
+import sys
+from pathlib import Path
+from urllib.parse import urlencode
 from dotenv import load_dotenv
 from langchain_mcp_adapters.client import MultiServerMCPClient
 from langchain_groq import ChatGroq
@@ -10,10 +13,18 @@ os.environ["REQUESTS_CA_BUNDLE"] = certifi.where()
 
 load_dotenv()
 
-TAVILY_API_KEY = os.getenv("TAVILY_API_KEY")
-AVIATIONSTACK_API_KEY = os.getenv("AVIATIONSTACK_API_KEY")
-OPENWEATHER_API_KEY = os.getenv("OPENWEATHER_API_KEY")
-GROQ_API_KEY = os.getenv("GROQ_API_KEY")
+def require_env(name: str) -> str:
+    value = os.getenv(name)
+    if not value:
+        raise RuntimeError(f"{name} is missing from the deployment environment")
+    return value
+
+
+TAVILY_API_KEY = require_env("TAVILY_API_KEY")
+AVIATIONSTACK_API_KEY = require_env("AVIATIONSTACK_API_KEY")
+OPENWEATHER_API_KEY = require_env("OPENWEATHER_API_KEY")
+GROQ_API_KEY = require_env("GROQ_API_KEY")
+BASE_DIR = Path(__file__).resolve().parent
 
 llm = ChatGroq (
     model = "openai/gpt-oss-20b",
@@ -24,7 +35,9 @@ client = MultiServerMCPClient(
     {
         "tavily": {
             "transport": "streamable_http",
-            "url": f"https://mcp.tavily.com/mcp/?tavilyApiKey={TAVILY_API_KEY}"
+            "url": "https://mcp.tavily.com/mcp/?" + urlencode(
+                {"tavilyApiKey": TAVILY_API_KEY}
+            )
         },
 
         "aviationstack": {
@@ -40,9 +53,9 @@ client = MultiServerMCPClient(
 
         "weather": {
             "transport": "stdio",
-            "command": r"D:\Akhi\GenAI_Projects\travel-mate\TravelMate\travel\Scripts\python.exe",
+            "command": sys.executable,
             "args": [
-                r"D:\Akhi\GenAI_Projects\travel-mate\TravelMate\custom_weather_mcp_server.py"
+                str(BASE_DIR / "custom_weather_mcp_server.py")
             ],
             "env": {
                 "OPENWEATHER_API_KEY": OPENWEATHER_API_KEY
@@ -57,7 +70,7 @@ async def get_all_tools():
 
     print("Available MCP Tools:")
     for tool in tools:
-        print(tool.name)
+        print(tool)
 
 
 # =======================================
@@ -72,7 +85,7 @@ async def initialize_mcp():
     global search_tool
     global aviation_tools
 
-    tools = await client.get_tools()
+    tools = await client.get_tools(server_name="tavily")
 
     print("Available MCP Tools:")
     for tool in tools:
@@ -106,7 +119,7 @@ async def aviation_mcp_call(
         tool_name: str,
         tool_args: dict = None
 ):
-    tools = await client.get_tools()
+    tools = await client.get_tools(server_name="aviationstack")
 
     tool = next(
         tool
@@ -135,7 +148,7 @@ async def initialize_weather_tools():
     if weather_tool is not None:
         return
 
-    tools = await client.get_tools()
+    tools = await client.get_tools(server_name="weather")
 
     weather_tool = next (
         tool for tool in tools if tool.name == "get_current_weather"
