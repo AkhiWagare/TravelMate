@@ -18,3 +18,4 @@ langchain-mcp-adapters == 0.3.0
 nest-asyncio == 1.6.0
 mcp == 1.28.1
 uv
+certifi == 2026.7.22

@@ -19,7 +19,6 @@ def require_env(name: str) -> str:
         raise RuntimeError(f"{name} is missing from the deployment environment")
     return value
 
-
 TAVILY_API_KEY = require_env("TAVILY_API_KEY")
 AVIATIONSTACK_API_KEY = require_env("AVIATIONSTACK_API_KEY")
 OPENWEATHER_API_KEY = require_env("OPENWEATHER_API_KEY")
